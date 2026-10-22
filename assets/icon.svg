@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2740"/>
+      <stop offset="1" stop-color="#1b1928"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+  <!-- A terminal prompt: the agent -->
+  <path d="M52 62 L82 84 L52 106" fill="none" stroke="#f4efe6" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="96" y="96" width="44" height="12" rx="6" fill="#f4efe6" opacity="0.55"/>
+  <!-- Two profiles: one switched on, one off -->
+  <rect x="44" y="132" width="168" height="40" rx="20" fill="#ff7a59"/>
+  <circle cx="192" cy="152" r="14" fill="#fff8f2"/>
+  <rect x="64" y="147" width="64" height="10" rx="5" fill="#fff8f2" opacity="0.9"/>
+  <rect x="44" y="184" width="168" height="40" rx="20" fill="none" stroke="#8d88a8" stroke-width="5"/>
+  <circle cx="64" cy="204" r="12" fill="#8d88a8"/>
+  <rect x="128" y="199" width="64" height="10" rx="5" fill="#8d88a8" opacity="0.8"/>
+</svg>

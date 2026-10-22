@@ -1,0 +1,26 @@
+name: Bug report
+description: A config file written wrongly, a crash, or something that looks off
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Never paste a real API key. Replace keys with `sk-REDACTED`.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: The config file before and after
+      description: The relevant part of settings.json or config.toml, with keys and private addresses redacted.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: OS, VS Code (or other editor), the extension, and Claude Code or Codex CLI
+    validations:
+      required: true

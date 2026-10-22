@@ -1,0 +1,15 @@
+name: Feature request
+description: A provider preset, an agent to support, or something the extension should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: For a new preset or agent, link the provider's or agent's documentation for the keys involved.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?

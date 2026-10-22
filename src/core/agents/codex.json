@@ -1,0 +1,318 @@
+{
+  "id": "codex",
+  "label": "Codex CLI",
+  "short": "Codex",
+  "docs": [
+    "https://github.com/openai/codex/blob/main/docs/config.md",
+    "https://learn.chatgpt.com/docs/config-file/config-reference",
+    "https://learn.chatgpt.com/docs/config-file/config-advanced"
+  ],
+  "config": {
+    "format": "toml",
+    "file": "config.toml",
+    "dirEnv": "CODEX_HOME",
+    "defaultDir": "~/.codex",
+    "dirMustExist": true
+  },
+  "note": "Writes model, model_provider and the reasoning keys of config.toml, and the provider's [model_providers.<id>] table. Comments and everything else in the file are kept. Codex ignores providers in a project's .codex/config.toml, so profiles apply to your user config only.",
+  "statusField": "model",
+  "statusFallback": "default model",
+  "fields": [
+    {
+      "id": "provider",
+      "label": "Provider id",
+      "type": "id",
+      "group": "connection",
+      "target": ["model_provider"],
+      "help": "model_provider. openai, ollama and lmstudio are built into Codex; any other id is defined by this profile as [model_providers.<id>].",
+      "required": true,
+      "default": "openai",
+      "pattern": "^[A-Za-z0-9_-]+$",
+      "patternMessage": "Letters, digits, - and _ only.",
+      "options": [
+        { "value": "openai", "label": "openai (built in)" },
+        { "value": "ollama", "label": "ollama (built in)" },
+        { "value": "lmstudio", "label": "lmstudio (built in)" }
+      ],
+      "freeform": true,
+      "reserved": {
+        "values": ["amazon-bedrock", "amazon-bedrock-runtime"],
+        "message": "The Bedrock providers are built into Codex and only take AWS settings; this extension doesn't manage them yet."
+      }
+    },
+    {
+      "id": "providerName",
+      "label": "Display name",
+      "type": "string",
+      "group": "connection",
+      "target": ["model_providers", "{provider}", "name"],
+      "help": "name: how Codex shows the provider.",
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "baseUrl",
+      "label": "Base URL",
+      "type": "url",
+      "group": "connection",
+      "target": ["model_providers", "{provider}", "base_url"],
+      "help": "base_url: the OpenAI-compatible API root, usually ending in /v1. Codex calls <base_url>/responses.",
+      "placeholder": "https://gateway.example.com/v1",
+      "required": true,
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "wireApi",
+      "label": "Wire API",
+      "type": "select",
+      "group": "connection",
+      "target": ["model_providers", "{provider}", "wire_api"],
+      "help": "wire_api. Codex speaks only the Responses API; \"chat\" was removed in 2026 and is now an error. A provider that only offers Chat Completions needs a translating proxy.",
+      "default": "responses",
+      "options": [{ "value": "responses", "label": "responses" }],
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "envKey",
+      "label": "Key variable",
+      "type": "string",
+      "group": "connection",
+      "target": ["model_providers", "{provider}", "env_key"],
+      "help": "env_key: the environment variable Codex reads the key from. Codex sends it as Authorization: Bearer. With \"No key here\", Codex still reads it from your own environment (a variable your shell exports); leave it empty for a server that needs no key.",
+      "placeholder": "OPENAI_API_KEY",
+      "required": true,
+      "requiredWhen": { "field": "secretMode", "in": ["terminal", "dotenv"] },
+      "pattern": "^(?!CODEX_)[A-Za-z_][A-Za-z0-9_]*$",
+      "patternMessage": "Letters, digits and underscores, not starting with CODEX_ (Codex skips those).",
+      "reserved": {
+        "pattern": "^(PATH|PATHEXT|HOME|USERPROFILE|SHELL|USER|USERNAME|LOGNAME|PWD|OLDPWD|TMPDIR|TEMP|TMP|LANG|LANGUAGE|TERM|TZ|ENV|BASH_ENV|IFS|PS1|PS4|PROMPT_COMMAND|EDITOR|VISUAL|PAGER|NODE_OPTIONS|NODE_PATH|PYTHONPATH|PYTHONHOME|PYTHONSTARTUP|PERL5OPT|PERL5LIB|RUBYOPT|RUBYLIB|JAVA_TOOL_OPTIONS|COMSPEC|SYSTEMROOT|DISPLAY|(LD|DYLD|GIT|SSH|GPG|LC|XDG|NPM_CONFIG|VSCODE|ELECTRON)_.*)$",
+        "message": "This variable is used by your shell or other programs; setting it to the key would break them. Choose a name of its own, such as OPENROUTER_API_KEY."
+      },
+      "when": [
+        { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] },
+        { "field": "secretMode", "in": ["terminal", "dotenv", "none"] }
+      ]
+    },
+    {
+      "id": "model",
+      "label": "Model",
+      "type": "string",
+      "group": "models",
+      "target": ["model"],
+      "help": "model: the model id the provider knows, such as an OpenRouter id like openai/gpt-oss-120b. Empty uses Codex's default.",
+      "models": true
+    },
+    {
+      "id": "reasoningEffort",
+      "label": "Reasoning effort",
+      "type": "select",
+      "group": "models",
+      "target": ["model_reasoning_effort"],
+      "help": "model_reasoning_effort. Which levels work depends on the model. Empty uses the model's default.",
+      "options": [
+        { "value": "", "label": "(model default)" },
+        { "value": "minimal", "label": "minimal" },
+        { "value": "low", "label": "low" },
+        { "value": "medium", "label": "medium" },
+        { "value": "high", "label": "high" },
+        { "value": "xhigh", "label": "xhigh" }
+      ],
+      "freeform": true,
+      "pattern": "^[a-z]+$",
+      "patternMessage": "A lowercase word such as medium."
+    },
+    {
+      "id": "reasoningSummary",
+      "label": "Reasoning summary",
+      "type": "select",
+      "group": "models",
+      "target": ["model_reasoning_summary"],
+      "help": "model_reasoning_summary.",
+      "options": [
+        { "value": "", "label": "(default)" },
+        { "value": "auto", "label": "auto" },
+        { "value": "concise", "label": "concise" },
+        { "value": "detailed", "label": "detailed" },
+        { "value": "none", "label": "none" }
+      ]
+    },
+    {
+      "id": "contextWindow",
+      "label": "Context window (tokens)",
+      "type": "number",
+      "write": "number",
+      "group": "models",
+      "target": ["model_context_window"],
+      "help": "model_context_window, for models Codex doesn't know the size of.",
+      "min": 1024,
+      "max": 100000000
+    },
+    {
+      "id": "queryParams",
+      "label": "Query parameters",
+      "type": "map",
+      "group": "advanced",
+      "target": ["model_providers", "{provider}", "query_params"],
+      "help": "query_params: added to every request URL, one name=value per line. Azure needs api-version.",
+      "placeholder": "api-version=2025-04-01-preview",
+      "pattern": "^([^=\\n]+=[^\\n]*)(\\n[^=\\n]+=[^\\n]*)*$",
+      "patternMessage": "One name=value per line.",
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "httpHeaders",
+      "label": "Extra headers",
+      "type": "map",
+      "group": "advanced",
+      "target": ["model_providers", "{provider}", "http_headers"],
+      "help": "http_headers: sent with every request, one Name=value per line. Don't put keys here: they would be written in plain text.",
+      "placeholder": "X-Team=platform",
+      "pattern": "^([^=\\n]+=[^\\n]*)(\\n[^=\\n]+=[^\\n]*)*$",
+      "patternMessage": "One Name=value per line.",
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "requestMaxRetries",
+      "label": "Request retries",
+      "type": "number",
+      "write": "number",
+      "group": "advanced",
+      "target": ["model_providers", "{provider}", "request_max_retries"],
+      "help": "request_max_retries (Codex default 4, at most 100).",
+      "min": 0,
+      "max": 100,
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "streamMaxRetries",
+      "label": "Stream retries",
+      "type": "number",
+      "write": "number",
+      "group": "advanced",
+      "target": ["model_providers", "{provider}", "stream_max_retries"],
+      "help": "stream_max_retries (Codex default 5, at most 100).",
+      "min": 0,
+      "max": 100,
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    },
+    {
+      "id": "streamIdleTimeoutMs",
+      "label": "Stream idle timeout (ms)",
+      "type": "number",
+      "write": "number",
+      "group": "advanced",
+      "target": ["model_providers", "{provider}", "stream_idle_timeout_ms"],
+      "help": "stream_idle_timeout_ms (Codex default 300000).",
+      "min": 1000,
+      "max": 86400000,
+      "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+    }
+  ],
+  "secret": {
+    "label": "API key",
+    "help": "Saved in VS Code's secret storage (your OS keychain), never in settings. Where Codex reads it from is up to you below.",
+    "clearPaths": [["model_providers", "{provider}", "experimental_bearer_token"]],
+    "modes": [
+      {
+        "id": "terminal",
+        "kind": "terminal",
+        "label": "VS Code terminals only",
+        "plaintext": false,
+        "envVar": "{envKey}",
+        "help": "Nothing is written to disk except env_key, the variable's name. The key is set as {envKey} in terminals opened in VS Code from now on, so codex started there uses it. codex started anywhere else, and the Codex extension's own panel, won't see it.",
+        "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+      },
+      {
+        "id": "dotenv",
+        "kind": "dotenv",
+        "label": "In Codex's .env file",
+        "plaintext": true,
+        "file": ".env",
+        "envVar": "{envKey}",
+        "help": "The key is written as {envKey}=… into .env in Codex's home folder (permissions 600), which Codex loads at startup wherever it runs, including its VS Code extension. Plain text on disk, kept out of config.toml. Codex reads this file according to its source code, not its documentation, so a future version could stop.",
+        "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+      },
+      {
+        "id": "config",
+        "kind": "config",
+        "label": "In config.toml",
+        "plaintext": true,
+        "target": ["model_providers", "{provider}", "experimental_bearer_token"],
+        "help": "The key is written into config.toml as experimental_bearer_token, in plain text. Codex documents it but recommends env_key instead.",
+        "when": { "field": "provider", "notIn": ["openai", "ollama", "lmstudio"] }
+      },
+      {
+        "id": "none",
+        "kind": "none",
+        "label": "No key here",
+        "plaintext": false,
+        "help": "For openai, sign in with codex login (ChatGPT or an API key, kept by Codex in auth.json or your keychain). Local servers such as Ollama need no key. For another provider, a key variable set below is still written as env_key, and Codex reads the key from your own environment."
+      }
+    ]
+  },
+  "presets": [
+    {
+      "id": "openai-login",
+      "label": "OpenAI (sign in)",
+      "description": "Codex's built-in openai provider, signed in with codex login (ChatGPT account or API key).",
+      "values": { "provider": "openai" },
+      "secretMode": "none",
+      "docs": "https://learn.chatgpt.com/docs/auth"
+    },
+    {
+      "id": "openai-api",
+      "label": "OpenAI API key",
+      "description": "The OpenAI API as a provider of its own, with a key this extension keeps.",
+      "values": { "provider": "openai-api", "providerName": "OpenAI API", "baseUrl": "https://api.openai.com/v1", "wireApi": "responses", "envKey": "OPENAI_API_KEY" },
+      "secretMode": "terminal",
+      "docs": "https://learn.chatgpt.com/docs/config-file/config-advanced"
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "description": "OpenRouter's OpenAI-compatible Responses endpoint.",
+      "values": { "provider": "openrouter", "providerName": "OpenRouter", "baseUrl": "https://openrouter.ai/api/v1", "wireApi": "responses", "envKey": "OPENROUTER_API_KEY" },
+      "secretMode": "terminal",
+      "docs": "https://openrouter.ai/docs"
+    },
+    {
+      "id": "azure",
+      "label": "Azure OpenAI",
+      "description": "An Azure OpenAI resource. Replace YOUR_RESOURCE with its name.",
+      "values": { "provider": "azure", "providerName": "Azure OpenAI", "baseUrl": "https://YOUR_RESOURCE.openai.azure.com/openai", "wireApi": "responses", "envKey": "AZURE_OPENAI_API_KEY", "queryParams": "api-version=2025-04-01-preview" },
+      "secretMode": "terminal",
+      "docs": "https://learn.chatgpt.com/docs/config-file/config-advanced"
+    },
+    {
+      "id": "openai-gateway",
+      "label": "OpenAI-compatible gateway",
+      "description": "LiteLLM, vLLM, a company proxy or any service with an OpenAI-compatible Responses API.",
+      "values": { "provider": "gateway", "providerName": "Gateway", "baseUrl": "https://", "wireApi": "responses", "envKey": "GATEWAY_API_KEY" },
+      "secretMode": "terminal",
+      "docs": "https://learn.chatgpt.com/docs/config-file/config-advanced"
+    },
+    {
+      "id": "ollama",
+      "label": "Ollama (local)",
+      "description": "Codex's built-in ollama provider, talking to Ollama on this machine. No key.",
+      "values": { "provider": "ollama", "model": "gpt-oss:20b" },
+      "secretMode": "none",
+      "docs": "https://learn.chatgpt.com/docs/config-file/config-advanced"
+    }
+  ],
+  "test": {
+    "when": { "field": "provider", "notEquals": "openai" },
+    "unsupported": "The built-in openai provider signs in through codex login, whose credentials this extension doesn't hold. Use the OpenAI API key preset to test a key.",
+    "baseUrlField": "baseUrl",
+    "defaultBaseUrlBy": "provider",
+    "defaultBaseUrl": { "ollama": "http://localhost:11434/v1", "lmstudio": "http://localhost:1234/v1" },
+    "auth": { "header": "Authorization", "prefix": "Bearer " },
+    "headersField": "httpHeaders",
+    "queryField": "queryParams",
+    "list": { "path": "/models" },
+    "probe": {
+      "path": "/responses",
+      "modelField": "model",
+      "body": { "input": "ping", "max_output_tokens": 16 }
+    }
+  }
+}

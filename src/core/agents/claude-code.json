@@ -1,0 +1,412 @@
+{
+  "id": "claude-code",
+  "label": "Claude Code",
+  "short": "Claude",
+  "docs": [
+    "https://code.claude.com/docs/en/settings",
+    "https://code.claude.com/docs/en/env-vars",
+    "https://code.claude.com/docs/en/llm-gateway",
+    "https://code.claude.com/docs/en/amazon-bedrock",
+    "https://code.claude.com/docs/en/google-vertex-ai"
+  ],
+  "config": {
+    "format": "json",
+    "file": "settings.json",
+    "dirEnv": "CLAUDE_CONFIG_DIR",
+    "defaultDir": "~/.claude"
+  },
+  "projectConfig": {
+    "format": "json",
+    "file": ".claude/settings.local.json",
+    "note": "Claude Code reads .claude/settings.local.json in the project. It wins over your user settings while you work in this folder. A key written to it in plain text is kept out of Git: the file is added to .git/info/exclude when nothing ignores it yet."
+  },
+  "note": "Writes the env block and model of settings.json. Everything else in the file is left as it is.",
+  "statusField": "model",
+  "statusFallback": "default model",
+  "fields": [
+    {
+      "id": "backend",
+      "label": "Service",
+      "type": "select",
+      "group": "connection",
+      "help": "Where requests go: the Anthropic API or a compatible gateway, Amazon Bedrock, or Google Vertex AI.",
+      "default": "anthropic",
+      "required": true,
+      "options": [
+        { "value": "anthropic", "label": "Anthropic API or compatible gateway" },
+        { "value": "bedrock", "label": "Amazon Bedrock" },
+        { "value": "vertex", "label": "Google Vertex AI" }
+      ]
+    },
+    {
+      "id": "baseUrl",
+      "label": "Base URL",
+      "type": "url",
+      "group": "connection",
+      "target": ["env", "ANTHROPIC_BASE_URL"],
+      "help": "ANTHROPIC_BASE_URL. Leave empty for the Anthropic API. For a gateway, the address without /v1, such as https://openrouter.ai/api.",
+      "placeholder": "https://api.anthropic.com",
+      "when": { "field": "backend", "equals": "anthropic" }
+    },
+    {
+      "id": "useBedrock",
+      "label": "Use Bedrock",
+      "type": "constant",
+      "group": "connection",
+      "value": "1",
+      "target": ["env", "CLAUDE_CODE_USE_BEDROCK"],
+      "help": "CLAUDE_CODE_USE_BEDROCK=1, written while the service is Amazon Bedrock.",
+      "when": { "field": "backend", "equals": "bedrock" }
+    },
+    {
+      "id": "awsRegion",
+      "label": "AWS region",
+      "type": "string",
+      "group": "connection",
+      "target": ["env", "AWS_REGION"],
+      "help": "AWS_REGION. Claude Code does not read the region from your AWS config file, so it is required.",
+      "placeholder": "us-east-1",
+      "pattern": "^[a-z]{2}(-[a-z]+)+-\\d+$",
+      "patternMessage": "An AWS region looks like us-east-1.",
+      "required": true,
+      "when": { "field": "backend", "equals": "bedrock" }
+    },
+    {
+      "id": "awsProfile",
+      "label": "AWS profile",
+      "type": "string",
+      "group": "connection",
+      "target": ["env", "AWS_PROFILE"],
+      "help": "AWS_PROFILE, for SSO or a named profile in ~/.aws. Leave empty to use the default credential chain.",
+      "when": { "field": "backend", "equals": "bedrock" }
+    },
+    {
+      "id": "bedrockBaseUrl",
+      "label": "Bedrock endpoint",
+      "type": "url",
+      "group": "connection",
+      "target": ["env", "ANTHROPIC_BEDROCK_BASE_URL"],
+      "help": "ANTHROPIC_BEDROCK_BASE_URL, for a proxy or gateway in front of Bedrock. Usually empty.",
+      "when": { "field": "backend", "equals": "bedrock" }
+    },
+    {
+      "id": "useVertex",
+      "label": "Use Vertex AI",
+      "type": "constant",
+      "group": "connection",
+      "value": "1",
+      "target": ["env", "CLAUDE_CODE_USE_VERTEX"],
+      "help": "CLAUDE_CODE_USE_VERTEX=1, written while the service is Google Vertex AI.",
+      "when": { "field": "backend", "equals": "vertex" }
+    },
+    {
+      "id": "vertexProject",
+      "label": "Google Cloud project",
+      "type": "string",
+      "group": "connection",
+      "target": ["env", "ANTHROPIC_VERTEX_PROJECT_ID"],
+      "help": "ANTHROPIC_VERTEX_PROJECT_ID. Credentials come from gcloud (application default credentials).",
+      "required": true,
+      "pattern": "^[a-z][a-z0-9-]{4,61}[a-z0-9]$",
+      "patternMessage": "A project id is 6 to 30 lowercase letters, digits and hyphens.",
+      "when": { "field": "backend", "equals": "vertex" }
+    },
+    {
+      "id": "vertexRegion",
+      "label": "Vertex region",
+      "type": "string",
+      "group": "connection",
+      "target": ["env", "CLOUD_ML_REGION"],
+      "help": "CLOUD_ML_REGION, such as global or us-east5.",
+      "placeholder": "global",
+      "required": true,
+      "when": { "field": "backend", "equals": "vertex" }
+    },
+    {
+      "id": "vertexBaseUrl",
+      "label": "Vertex endpoint",
+      "type": "url",
+      "group": "connection",
+      "target": ["env", "ANTHROPIC_VERTEX_BASE_URL"],
+      "help": "ANTHROPIC_VERTEX_BASE_URL, for a proxy or gateway in front of Vertex AI. Usually empty.",
+      "when": { "field": "backend", "equals": "vertex" }
+    },
+    {
+      "id": "authVar",
+      "label": "Send the key as",
+      "type": "select",
+      "group": "connection",
+      "help": "ANTHROPIC_AUTH_TOKEN is sent as Authorization: Bearer, which most gateways expect. ANTHROPIC_API_KEY is sent as X-Api-Key, as the Anthropic API does. AWS_BEARER_TOKEN_BEDROCK is a Bedrock API key.",
+      "default": "ANTHROPIC_AUTH_TOKEN",
+      "required": true,
+      "options": [
+        { "value": "ANTHROPIC_AUTH_TOKEN", "label": "ANTHROPIC_AUTH_TOKEN (Authorization: Bearer)" },
+        { "value": "ANTHROPIC_API_KEY", "label": "ANTHROPIC_API_KEY (X-Api-Key)" },
+        { "value": "AWS_BEARER_TOKEN_BEDROCK", "label": "AWS_BEARER_TOKEN_BEDROCK (Bedrock API key)" }
+      ],
+      "when": [
+        { "field": "secretMode", "notEquals": "none" },
+        { "field": "backend", "notEquals": "vertex" }
+      ]
+    },
+    {
+      "id": "model",
+      "label": "Main model",
+      "type": "string",
+      "group": "models",
+      "target": ["model"],
+      "help": "The model setting: an alias (opus, sonnet, haiku, opusplan, sonnet[1m]) or a full model id. Read when a session starts. An ANTHROPIC_MODEL variable in your shell wins over it.",
+      "placeholder": "default",
+      "options": [
+        { "value": "default", "label": "default" },
+        { "value": "opus", "label": "opus" },
+        { "value": "sonnet", "label": "sonnet" },
+        { "value": "haiku", "label": "haiku" },
+        { "value": "opusplan", "label": "opusplan" },
+        { "value": "sonnet[1m]", "label": "sonnet[1m]" }
+      ],
+      "freeform": true,
+      "models": true
+    },
+    {
+      "id": "opusModel",
+      "label": "Opus model",
+      "type": "string",
+      "group": "models",
+      "target": ["env", "ANTHROPIC_DEFAULT_OPUS_MODEL"],
+      "help": "ANTHROPIC_DEFAULT_OPUS_MODEL: the model the opus alias (and opusplan in plan mode) resolves to.",
+      "models": true
+    },
+    {
+      "id": "sonnetModel",
+      "label": "Sonnet model",
+      "type": "string",
+      "group": "models",
+      "target": ["env", "ANTHROPIC_DEFAULT_SONNET_MODEL"],
+      "help": "ANTHROPIC_DEFAULT_SONNET_MODEL: the model the sonnet alias resolves to.",
+      "models": true
+    },
+    {
+      "id": "haikuModel",
+      "label": "Haiku / small and fast model",
+      "type": "string",
+      "group": "models",
+      "target": ["env", "ANTHROPIC_DEFAULT_HAIKU_MODEL"],
+      "help": "ANTHROPIC_DEFAULT_HAIKU_MODEL: the haiku alias and background tasks. Replaces the deprecated ANTHROPIC_SMALL_FAST_MODEL.",
+      "models": true
+    },
+    {
+      "id": "subagentModel",
+      "label": "Subagent model",
+      "type": "string",
+      "group": "models",
+      "target": ["env", "CLAUDE_CODE_SUBAGENT_MODEL"],
+      "help": "CLAUDE_CODE_SUBAGENT_MODEL: the model subagents use.",
+      "models": true
+    },
+    {
+      "id": "customHeaders",
+      "label": "Extra request headers",
+      "type": "text",
+      "group": "advanced",
+      "target": ["env", "ANTHROPIC_CUSTOM_HEADERS"],
+      "help": "ANTHROPIC_CUSTOM_HEADERS: one Name: value per line, sent with every request. Written in plain text, so a header that carries a key is refused: use the key field.",
+      "headerLines": true,
+      "placeholder": "X-Team: platform",
+      "pattern": "^([^:\\n]+:[^\\n]*)(\\n[^:\\n]+:[^\\n]*)*$",
+      "patternMessage": "One Name: value per line.",
+      "when": { "field": "backend", "equals": "anthropic" }
+    },
+    {
+      "id": "apiTimeout",
+      "label": "Request timeout (ms)",
+      "type": "number",
+      "group": "advanced",
+      "target": ["env", "API_TIMEOUT_MS"],
+      "help": "API_TIMEOUT_MS. Slow gateways and long generations may need more than the default.",
+      "min": 1000,
+      "max": 3600000
+    },
+    {
+      "id": "maxOutputTokens",
+      "label": "Max output tokens",
+      "type": "number",
+      "group": "advanced",
+      "target": ["env", "CLAUDE_CODE_MAX_OUTPUT_TOKENS"],
+      "help": "CLAUDE_CODE_MAX_OUTPUT_TOKENS. Lower it for models with a small output limit.",
+      "min": 1,
+      "max": 1000000
+    },
+    {
+      "id": "disableTraffic",
+      "label": "Turn off non-essential traffic",
+      "type": "boolean",
+      "write": "flag",
+      "group": "advanced",
+      "target": ["env", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"],
+      "help": "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1: no update checks, error reporting or telemetry. Common with gateways."
+    },
+    {
+      "id": "extraEnv",
+      "label": "Other environment variables",
+      "type": "map",
+      "spread": true,
+      "group": "advanced",
+      "target": ["env"],
+      "help": "Written into the env block, one KEY=value per line. An empty value (KEY=) is written as an empty string, which makes Claude Code treat the variable as unset. Never put keys here: use the key field above.",
+      "placeholder": "ANTHROPIC_API_KEY=",
+      "pattern": "^([A-Za-z_][A-Za-z0-9_]*=[^\\n]*)(\\n[A-Za-z_][A-Za-z0-9_]*=[^\\n]*)*$",
+      "patternMessage": "One KEY=value per line; names are letters, digits and underscores."
+    }
+  ],
+  "secret": {
+    "label": "Key or token",
+    "help": "Saved in VS Code's secret storage (your OS keychain), never in settings. Where Claude Code reads it from is up to you below.",
+    "clearPaths": [
+      ["env", "ANTHROPIC_AUTH_TOKEN"],
+      ["env", "ANTHROPIC_API_KEY"],
+      ["env", "AWS_BEARER_TOKEN_BEDROCK"]
+    ],
+    "modes": [
+      {
+        "id": "terminal",
+        "kind": "terminal",
+        "label": "VS Code terminals only",
+        "plaintext": false,
+        "envVar": "{authVar}",
+        "help": "Nothing is written to disk. The key is set as {authVar} in terminals opened in VS Code from now on, so claude started there uses it. claude started anywhere else, and the Claude Code extension's own panel, won't see it.",
+        "when": { "field": "backend", "notEquals": "vertex" }
+      },
+      {
+        "id": "helper",
+        "kind": "helper",
+        "label": "Key file read by apiKeyHelper",
+        "plaintext": true,
+        "target": ["apiKeyHelper"],
+        "help": "The key goes into a file only you can read (permissions 600) in Claude Code's config folder, and settings.json gets an apiKeyHelper command that prints it. settings.json stays free of the key, so it is safe to sync or share, but the key is still plain text in that file. Claude Code sends it as both X-Api-Key and Authorization: Bearer.",
+        "when": [
+          { "field": "backend", "equals": "anthropic" },
+          { "field": "authVar", "notEquals": "AWS_BEARER_TOKEN_BEDROCK" }
+        ]
+      },
+      {
+        "id": "config",
+        "kind": "config",
+        "label": "In settings.json",
+        "plaintext": true,
+        "target": ["env", "{authVar}"],
+        "help": "The key is written into the env block of settings.json as {authVar}, in plain text. Works everywhere Claude Code runs, including its VS Code extension, but anyone or anything that reads settings.json can read the key.",
+        "when": { "field": "backend", "notEquals": "vertex" }
+      },
+      {
+        "id": "none",
+        "kind": "none",
+        "label": "No key here",
+        "plaintext": false,
+        "help": "Claude Code signs in on its own: /login with a Claude subscription or Console account, or your AWS or Google Cloud credentials. Any key a previous profile wrote is removed."
+      }
+    ]
+  },
+  "presets": [
+    {
+      "id": "anthropic-login",
+      "label": "Anthropic (sign in)",
+      "description": "Claude subscription or Console account, signed in with /login. Clears any gateway settings.",
+      "values": { "backend": "anthropic" },
+      "secretMode": "none",
+      "docs": "https://code.claude.com/docs/en/iam"
+    },
+    {
+      "id": "anthropic-key",
+      "label": "Anthropic API key",
+      "description": "An API key from the Claude Console, sent to the Anthropic API.",
+      "values": { "backend": "anthropic", "authVar": "ANTHROPIC_API_KEY" },
+      "secretMode": "terminal",
+      "docs": "https://code.claude.com/docs/en/iam"
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "description": "OpenRouter's Anthropic-compatible endpoint. Its docs ask for ANTHROPIC_API_KEY to be explicitly empty.",
+      "values": {
+        "backend": "anthropic",
+        "baseUrl": "https://openrouter.ai/api",
+        "authVar": "ANTHROPIC_AUTH_TOKEN",
+        "extraEnv": "ANTHROPIC_API_KEY="
+      },
+      "secretMode": "terminal",
+      "docs": "https://openrouter.ai/docs/cookbook/coding-agents/claude-code-integration"
+    },
+    {
+      "id": "anthropic-gateway",
+      "label": "Anthropic-compatible gateway",
+      "description": "LiteLLM, a company proxy or any service that speaks the Anthropic Messages API.",
+      "values": { "backend": "anthropic", "baseUrl": "https://", "authVar": "ANTHROPIC_AUTH_TOKEN", "disableTraffic": "true" },
+      "secretMode": "terminal",
+      "docs": "https://code.claude.com/docs/en/llm-gateway"
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "description": "DeepSeek's Anthropic-compatible endpoint.",
+      "values": { "backend": "anthropic", "baseUrl": "https://api.deepseek.com/anthropic", "authVar": "ANTHROPIC_AUTH_TOKEN", "apiTimeout": "600000" },
+      "secretMode": "terminal",
+      "docs": "https://api-docs.deepseek.com/guides/anthropic_api"
+    },
+    {
+      "id": "kimi",
+      "label": "Kimi (Moonshot)",
+      "description": "Moonshot's Anthropic-compatible endpoint.",
+      "values": { "backend": "anthropic", "baseUrl": "https://api.moonshot.ai/anthropic", "authVar": "ANTHROPIC_AUTH_TOKEN" },
+      "secretMode": "terminal",
+      "docs": "https://platform.kimi.ai/docs/overview"
+    },
+    {
+      "id": "zai",
+      "label": "Z.ai (GLM)",
+      "description": "Z.ai's Anthropic-compatible endpoint, with the long timeout its docs suggest.",
+      "values": { "backend": "anthropic", "baseUrl": "https://api.z.ai/api/anthropic", "authVar": "ANTHROPIC_AUTH_TOKEN", "apiTimeout": "3000000" },
+      "secretMode": "terminal",
+      "docs": "https://docs.z.ai/devpack/tool/claude"
+    },
+    {
+      "id": "bedrock",
+      "label": "Amazon Bedrock",
+      "description": "Claude on Bedrock with your AWS credentials (SSO, profile or environment).",
+      "values": { "backend": "bedrock", "awsRegion": "us-east-1" },
+      "secretMode": "none",
+      "docs": "https://code.claude.com/docs/en/amazon-bedrock"
+    },
+    {
+      "id": "vertex",
+      "label": "Google Vertex AI",
+      "description": "Claude on Vertex AI with gcloud application default credentials.",
+      "values": { "backend": "vertex", "vertexRegion": "global" },
+      "secretMode": "none",
+      "docs": "https://code.claude.com/docs/en/google-vertex-ai"
+    }
+  ],
+  "test": {
+    "when": [
+      { "field": "backend", "equals": "anthropic" },
+      { "field": "secretMode", "notEquals": "none" }
+    ],
+    "unsupported": "Test connection works with a key for the Anthropic API or a gateway. Bedrock, Vertex AI and signed-in accounts use credentials this extension doesn't hold.",
+    "baseUrlField": "baseUrl",
+    "defaultBaseUrl": "https://api.anthropic.com",
+    "authBy": "authVar",
+    "auth": {
+      "ANTHROPIC_AUTH_TOKEN": { "header": "Authorization", "prefix": "Bearer " },
+      "ANTHROPIC_API_KEY": { "header": "x-api-key" }
+    },
+    "headers": { "anthropic-version": "2023-06-01" },
+    "headersField": "customHeaders",
+    "list": { "path": "/v1/models" },
+    "probe": {
+      "path": "/v1/messages",
+      "modelField": "model",
+      "aliases": { "default": "", "opus": "opusModel", "opusplan": "opusModel", "sonnet": "sonnetModel", "sonnet[1m]": "sonnetModel", "haiku": "haikuModel" },
+      "body": { "max_tokens": 1, "messages": [{ "role": "user", "content": "ping" }] }
+    }
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "name": "agent-profiles",
+  "displayName": "Agent Profiles",
+  "description": "Switch the provider, gateway, key and models that Claude Code and Codex CLI use, from a form and the status bar. Keys stay in secret storage; every change is previewed as a diff and backed up.",
+  "version": "0.1.0",
+  "publisher": "heyliam",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#1d1b2b",
+    "theme": "dark"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heyliamme/agent-profiles"
+  },
+  "bugs": {
+    "url": "https://github.com/heyliamme/agent-profiles/issues"
+  },
+  "homepage": "https://github.com/heyliamme/agent-profiles#readme",
+  "qna": "https://github.com/heyliamme/agent-profiles/issues",
+  "pricing": "Free",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "claude code",
+    "codex",
+    "codex cli",
+    "ai agent",
+    "llm gateway",
+    "openrouter",
+    "api key",
+    "provider switcher",
+    "model switcher",
+    "bedrock",
+    "vertex ai",
+    "litellm"
+  ],
+  "main": "./dist/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onWebviewPanel:agentProfiles"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In Restricted Mode, profiles can still be applied to your user settings, which nothing in the workspace can influence, but not to the workspace's own .claude/settings.local.json."
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Profiles apply to the agents' config files on the machine the extension runs on; project settings need a folder on disk."
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentProfiles.open",
+        "title": "Open Profiles",
+        "category": "Agent Profiles",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "agentProfiles.switch",
+        "title": "Switch Profile…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.newProfile",
+        "title": "New Profile…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.importCurrent",
+        "title": "Import Current Config as Profile…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.restore",
+        "title": "Restore Previous Config…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.testConnection",
+        "title": "Test Connection…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.exportProfiles",
+        "title": "Export Profiles (Without Keys)…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.importProfiles",
+        "title": "Import Profiles…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.setWorkspaceDefault",
+        "title": "Set Workspace Default Profile…",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.applyWorkspaceDefault",
+        "title": "Apply Workspace Default Profile",
+        "category": "Agent Profiles"
+      },
+      {
+        "command": "agentProfiles.openConfig",
+        "title": "Open Agent Config File…",
+        "category": "Agent Profiles"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "agentProfiles.setWorkspaceDefault",
+          "when": "workspaceFolderCount > 0"
+        },
+        {
+          "command": "agentProfiles.applyWorkspaceDefault",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Agent Profiles",
+      "properties": {
+        "agentProfiles.statusBar": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "always",
+            "never"
+          ],
+          "enumDescriptions": [
+            "For each agent that has at least one profile",
+            "For every supported agent",
+            "Never"
+          ],
+          "default": "auto",
+          "scope": "application",
+          "markdownDescription": "When to show the active profile of each agent in the status bar."
+        },
+        "agentProfiles.backups": {
+          "type": "integer",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 100,
+          "scope": "application",
+          "markdownDescription": "How many copies of each config file to keep. A copy is taken before every change this extension makes, in its own storage, readable only by you."
+        },
+        "agentProfiles.testTimeoutSeconds": {
+          "type": "integer",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 120,
+          "scope": "application",
+          "markdownDescription": "How long **Test connection** waits for an answer."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/build.mjs --watch",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "node scripts/build.mjs && node --test test/*.test.mjs",
+    "package": "node scripts/build.mjs --prod && vsce package --no-dependencies",
+    "test:e2e": "npm run package && node test/e2e/run.mjs"
+  },
+  "devDependencies": {
+    "@decimalturn/toml-patch": "3.3.0",
+    "@types/node": "^26.6.5",
+    "@types/vscode": "^1.90.0",
+    "@vscode/codicons": "0.0.36",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "jsonc-parser": "3.3.1",
+    "ovsx": "^1.3.0",
+    "typescript": "^7.0.2"
+  }
+}
