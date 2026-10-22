@@ -1,6 +1,7 @@
 // Importing the current config as a profile, export / import, masking, definitions.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'fs';
+import path from 'node:path';
 import { test } from 'node:test';
 import { applyText, claude, codex, core, fakeKey, profile } from './helpers.mjs';
 
@@ -132,7 +133,9 @@ test('a new agent is a data file: a minimal definition plans an apply', () => {
   assert.deepEqual(core.checkAgentDef(def), []);
   const p = profile(def, { model: 'm' }, 'config');
   assert.deepEqual(JSON.parse(applyText(def, '{"x":1}', p, { secret: 'k-123456789' }).text), { x: 1, model: 'm', apiKey: 'k-123456789' });
-  assert.equal(core.configFile(def, { DEMO_HOME: '/d' }), '/d/config.json');
+  assert.equal(core.configFile(def, { DEMO_HOME: '/d' }, '/home/u', path.posix), '/d/config.json');
+  assert.equal(core.configFile(def, {}, '/home/u', path.posix), '/home/u/.demo/config.json');
+  assert.equal(core.configFile(def, { DEMO_HOME: 'D:\\d' }, 'C:\\Users\\u', path.win32), 'D:\\d\\config.json');
 });
 
 test('docs sources named in the definitions are recorded in the README', () => {

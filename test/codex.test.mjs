@@ -1,7 +1,8 @@
 // Codex: config.toml merges that keep comments and other tables, providers, keys.
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { test } from 'node:test';
-import { applyText, codex, core, fakeKey, profile } from './helpers.mjs';
+import { applyText, codex, core, fakeKey, profile, tmp } from './helpers.mjs';
 
 const existing = `# Codex settings, edited by hand
 model = "gpt-old" # what I used before
@@ -171,8 +172,13 @@ test('config.toml with a syntax error is refused', () => {
 });
 
 test('CODEX_HOME moves the config', () => {
-  assert.equal(core.configFile(codex, {}, '/home/u'), '/home/u/.codex/config.toml');
-  assert.equal(core.configFile(codex, { CODEX_HOME: '/data/codex' }, '/home/u'), '/data/codex/config.toml');
+  assert.equal(core.configFile(codex, {}, '/home/u', path.posix), '/home/u/.codex/config.toml');
+  assert.equal(core.configFile(codex, { CODEX_HOME: '/data/codex' }, '/home/u', path.posix), '/data/codex/config.toml');
+  assert.equal(core.configFile(codex, {}, 'C:\\Users\\u', path.win32), 'C:\\Users\\u\\.codex\\config.toml');
+  assert.equal(core.configFile(codex, { CODEX_HOME: 'E:\\codex' }, 'C:\\Users\\u', path.win32), 'E:\\codex\\config.toml');
+  // This machine's own path functions, whatever it runs on.
+  const home = tmp();
+  assert.equal(core.configFile(codex, {}, home), path.join(home, '.codex', 'config.toml'));
 });
 
 test('the result is re-read and compared before it is accepted', () => {

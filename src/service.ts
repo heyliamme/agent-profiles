@@ -34,10 +34,13 @@ import {
   writePrivate,
   removeFile,
   editDotenv,
+  tilde,
   type BackupEntry,
   type PreparedApply,
 } from './core/index';
 import type { AgentDef, AppliedRecord, Profile, Scope } from './core/types';
+
+export { tilde };
 import type { TestOutcome } from './protocol';
 import { Store } from './store';
 
@@ -80,12 +83,6 @@ export class PreviewDocs implements vscode.TextDocumentContentProvider {
     return [a, b];
   }
 }
-
-const home = () => process.env.HOME || process.env.USERPROFILE || '';
-export const tilde = (p: string) => {
-  const h = home();
-  return h && (p === h || p.startsWith(h + path.sep)) ? '~' + p.slice(h.length) : p;
-};
 
 export class Service {
   readonly backups: Backups;

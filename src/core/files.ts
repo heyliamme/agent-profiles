@@ -9,15 +9,32 @@ import type { AgentDef, AppliedRecord } from './types';
 
 export const sha = (s: string) => createHash('sha256').update(s).digest('hex');
 
-/** The agent's config directory: its environment variable, else the default under home. */
-export function configDir(def: AgentDef, env: Record<string, string | undefined> = process.env, home = os.homedir()): string {
+/** Path functions of one platform: `path` (this machine), or `path.posix` / `path.win32` in tests. */
+export type PathApi = Pick<typeof path, 'join' | 'resolve' | 'sep'>;
+
+/**
+ * The agent's config directory: its environment variable, else the default under home.
+ * Home is `os.homedir()`, which is what both CLIs use: USERPROFILE on Windows (a HOME set
+ * by Git Bash or MSYS is not what they read), HOME elsewhere. A leading ~ in the variable
+ * is expanded with either separator.
+ */
+export function configDir(def: AgentDef, env: Record<string, string | undefined> = process.env, home = os.homedir(), p: PathApi = path): string {
   const fromEnv = def.config.dirEnv ? env[def.config.dirEnv]?.trim() : undefined;
-  if (fromEnv) return path.resolve(fromEnv.replace(/^~(?=$|[\\/])/, home));
-  return path.join(home, def.config.defaultDir.replace(/^~[\\/]?/, ''));
+  if (fromEnv) return p.resolve(fromEnv.replace(/^~(?=$|[\\/])/, () => home));
+  return p.join(home, def.config.defaultDir.replace(/^~[\\/]?/, ''));
 }
 
-export function configFile(def: AgentDef, env?: Record<string, string | undefined>, home?: string): string {
-  return path.join(configDir(def, env, home), def.config.file);
+export function configFile(def: AgentDef, env?: Record<string, string | undefined>, home?: string, p: PathApi = path): string {
+  return p.join(configDir(def, env, home, p), def.config.file);
+}
+
+/** A path for display, with the home directory shown as ~ (compared without case on Windows). */
+export function tilde(file: string, home = os.homedir(), p: PathApi = path): string {
+  const win = p.sep === '\\';
+  const h = home.replace(/[\\/]+$/, '');
+  if (!h) return file;
+  const [f, hh] = win ? [file.toLowerCase(), h.toLowerCase()] : [file, h];
+  return f === hh || f.startsWith(hh + p.sep) ? '~' + file.slice(h.length) : file;
 }
 
 export interface FileState {

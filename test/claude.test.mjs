@@ -1,5 +1,6 @@
 // Claude Code: settings.json merges, switching, key handling, config directory.
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { test } from 'node:test';
 import { applyText, claude, core, fakeKey, profile } from './helpers.mjs';
 
@@ -139,10 +140,35 @@ test('CRLF line endings and tab indentation are kept', () => {
 });
 
 test('CLAUDE_CONFIG_DIR moves the settings file; ~ is expanded', () => {
-  assert.equal(core.configFile(claude, {}, '/home/u'), '/home/u/.claude/settings.json');
-  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '/srv/claude-work' }, '/home/u'), '/srv/claude-work/settings.json');
-  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~/alt' }, '/home/u'), '/home/u/alt/settings.json');
-  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '  ' }, '/home/u'), '/home/u/.claude/settings.json');
+  const p = path.posix;
+  assert.equal(core.configFile(claude, {}, '/home/u', p), '/home/u/.claude/settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '/srv/claude-work' }, '/home/u', p), '/srv/claude-work/settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~/alt' }, '/home/u', p), '/home/u/alt/settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~' }, '/home/u', p), '/home/u/settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~alt' }, '/home/u', p).endsWith('/~alt/settings.json'), true);
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '  ' }, '/home/u', p), '/home/u/.claude/settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~/alt' }, '/home/$&u', p), '/home/$&u/alt/settings.json');
+});
+
+test('on Windows: USERPROFILE-style home, drive letters, either separator after ~', () => {
+  const w = path.win32;
+  const home = 'C:\\Users\\u';
+  assert.equal(core.configFile(claude, {}, home, w), 'C:\\Users\\u\\.claude\\settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: 'D:\\claude-work\\' }, home, w), 'D:\\claude-work\\settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: 'D:/claude-work' }, home, w), 'D:\\claude-work\\settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~\\alt' }, home, w), 'C:\\Users\\u\\alt\\settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '~/alt' }, home, w), 'C:\\Users\\u\\alt\\settings.json');
+  assert.equal(core.configFile(claude, { CLAUDE_CONFIG_DIR: '\\\\srv\\share\\claude' }, home, w), '\\\\srv\\share\\claude\\settings.json');
+});
+
+test('paths are shown with ~ for home, without case on Windows and never for a lookalike prefix', () => {
+  assert.equal(core.tilde('/home/u/.claude/settings.json', '/home/u', path.posix), '~/.claude/settings.json');
+  assert.equal(core.tilde('/home/u', '/home/u/', path.posix), '~');
+  assert.equal(core.tilde('/home/user2/x', '/home/u', path.posix), '/home/user2/x');
+  assert.equal(core.tilde('/HOME/u/x', '/home/u', path.posix), '/HOME/u/x');
+  assert.equal(core.tilde('/x', '', path.posix), '/x');
+  assert.equal(core.tilde('c:\\users\\U\\.codex\\config.toml', 'C:\\Users\\u', path.win32), '~\\.codex\\config.toml');
+  assert.equal(core.tilde('C:\\Users\\u2\\x', 'C:\\Users\\u', path.win32), 'C:\\Users\\u2\\x');
 });
 
 test('validation: URLs, required fields, numbers, patterns, keys in the wrong place', () => {
